@@ -17,6 +17,35 @@ When you click the **Knit** button a document will be generated that includes bo
 library(tidyverse)
 library(tidycensus)
 library(leaflet)
+library(mapview)
+
+census_api_key("5916b974b0cfca1d7db57c9af8216b3271648948")
 ```
 
+```{r import}
+income <- get_acs("tract", variables = c("B19001_001E", "B19001_017E",
+                                         "B19001_015E", "B19001_016E",
+                                         "B19001_014E"), year = 2016,
+  state = "RI", county = "Providence", geometry = TRUE,
+  moe_level = 90, survey = "acs5") %>% 
+  spread(variable, estimate) %>% 
+  group_by(GEOID) %>% 
+  replace_na(B19001_001E = 0) %>% 
+  replace(., is.na(.), 0) %>% 
+  summarize(rich_pct = (sum(B19001_017) + sum(B19001_015) +
+                          sum(B19001_016) + sum(B19001_014))/sum(B19001_001))
+
+locations <- read_csv("/Users/peterkelly/Downloads/FastFoodRestaurants.csv")
+
+
+
+mapview(locations, xcol = "longitude", ycol ="latitude")
+mapview(income, zcol = "rich_pct", legend = TRUE)
+
+coordinates(locations) <- ~ lon + lat
+proj4string(locations) <- "+init=epsg:4326"
+
+mapview(df)
+
+```
 
