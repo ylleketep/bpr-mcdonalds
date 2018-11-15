@@ -18,15 +18,16 @@ library(tidyverse)
 library(tidycensus)
 library(leaflet)
 library(mapview)
+library(sp)
 
 census_api_key("5916b974b0cfca1d7db57c9af8216b3271648948")
 ```
 
 ```{r import}
-income <- get_acs("tract", variables = c("B19001_001E", "B19001_017E",
+income <- get_acs(variables = c("B19001_001E", "B19001_017E",
                                          "B19001_015E", "B19001_016E",
                                          "B19001_014E"), year = 2016,
-  state = "RI", county = "Providence", geometry = TRUE,
+  geography = "tract", state = "RI", geometry = TRUE,
   moe_level = 90, survey = "acs5") %>% 
   spread(variable, estimate) %>% 
   group_by(GEOID) %>% 
@@ -42,10 +43,10 @@ locations <- read_csv("/Users/peterkelly/Downloads/FastFoodRestaurants.csv")
 mapview(locations, xcol = "longitude", ycol ="latitude")
 mapview(income, zcol = "rich_pct", legend = TRUE)
 
-coordinates(locations) <- ~ lon + lat
+coordinates(locations) <- ~ longitude + latitude
 proj4string(locations) <- "+init=epsg:4326"
 
-mapview(df)
+mapview(locations) + mapview(income, zcol = "rich_pct", legend = TRUE)
 
 ```
 
