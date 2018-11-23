@@ -27,7 +27,7 @@ census_api_key("5916b974b0cfca1d7db57c9af8216b3271648948")
 income <- get_acs(variables = c("B19001_001E", "B19001_017E",
                                          "B19001_015E", "B19001_016E",
                                          "B19001_014E"), year = 2016,
-  geography = "tract", state = "RI", geometry = TRUE,
+  geography = "tract", state = c("AL", "OK", "RI", "NY"), geometry = TRUE,
   moe_level = 90, survey = "acs5") %>% 
   spread(variable, estimate) %>% 
   group_by(GEOID) %>% 
