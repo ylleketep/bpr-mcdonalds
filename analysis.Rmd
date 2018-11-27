@@ -19,28 +19,47 @@ library(tidycensus)
 library(leaflet)
 library(mapview)
 library(sp)
+library(sf)
 
 census_api_key("5916b974b0cfca1d7db57c9af8216b3271648948")
 ```
 
 ```{r import}
-income <- get_acs(variables = c("B19001_001E", "B19001_017E",
+income_tx <- get_acs(variables = c("B19001_001E", "B19001_017E",
                                          "B19001_015E", "B19001_016E",
                                          "B19001_014E"), year = 2016,
-  geography = "tract", state = c("AL", "OK", "RI", "NY"), geometry = TRUE,
+  geography = "county", state = c("TX"), geometry = TRUE,
   moe_level = 90, survey = "acs5") %>% 
   spread(variable, estimate) %>% 
   group_by(GEOID) %>% 
   replace_na(B19001_001E = 0) %>% 
   replace(., is.na(.), 0) %>% 
-  summarize(rich_pct = (sum(B19001_017) + sum(B19001_015) +
-                          sum(B19001_016) + sum(B19001_014))/sum(B19001_001))
+  mutate(rich_pct = (sum(B19001_017) + sum(B19001_015) +
+                          sum(B19001_016) + sum(B19001_014))/sum(B19001_001),
+         pop = sum(B19001_001))
+
+income_ct <- get_acs(variables = c("B19001_001E", "B19001_017E",
+                                         "B19001_015E", "B19001_016E",
+                                         "B19001_014E"), year = 2016,
+  geography = "county", state = c("NY"), geometry = TRUE,
+  moe_level = 90, survey = "acs5") %>% 
+  spread(variable, estimate) %>% 
+  group_by(GEOID) %>% 
+  replace_na(B19001_001E = 0) %>% 
+  replace(., is.na(.), 0) %>% 
+  mutate(rich_pct = (sum(B19001_017) + sum(B19001_015) +
+                          sum(B19001_016) + sum(B19001_014))/sum(B19001_001),
+         pop = sum(B19001_001))
 
 locations <- read_csv("/Users/peterkelly/Downloads/FastFoodRestaurants.csv")
+locations1 <- read_csv("/Users/peterkelly/Documents/bpr-mcdonalds/convertcsv.csv")
 
-
+locations_ri <- locations1 %>% 
+  filter(state == "RI")
+  
 
 mapview(locations, xcol = "longitude", ycol ="latitude")
+mapview(locations1, xcol = "longitude", ycol = "latitude")
 mapview(income, zcol = "rich_pct", legend = TRUE)
 
 coordinates(locations) <- ~ longitude + latitude
@@ -49,4 +68,33 @@ proj4string(locations) <- "+init=epsg:4326"
 mapview(locations) + mapview(income, zcol = "rich_pct", legend = TRUE)
 
 ```
+
+```{r}
+locations1_sf = st_as_sf(locations1, coords = c("longitude", "latitude"), 
+                 crs = st_crs(income), agr = "constant")
+
+counties_mcds_tx <- st_intersection(as_sf, income_tx) %>% 
+  group_by(GEOID) %>% 
+  summarize(num_mcds = n(), pop = mean(pop), rich_pct = mean(rich_pct))
+
+counties_mcds_ct <- st_intersection(as_sf, income_ct) %>% 
+  group_by(GEOID) %>% 
+  summarize(num_mcds = n(), pop = mean(pop), rich_pct = mean(rich_pct))
+
+mapview(i_s)
+
+ggplot(counties_mcds_tx) +
+  geom_point(aes(x = rich_pct, y = num_mcds/pop)) +
+  geom_smooth(aes(x = rich_pct, y = num_mcds/pop))
+
+ggplot(counties_mcds_ct) +
+  geom_point(aes(x = rich_pct, y = num_mcds/pop)) +
+  geom_smooth(aes(x = rich_pct, y = num_mcds/pop))
+
+fit <- lm(num_mcds/pop ~ rich_pct, data = counties_mcds_tx)
+fit2 <- lm(num_mcds/pop ~ rich_pct, data = counties_mcds_ct)
+summary(fit)
+summary(fit2)
+```
+
 
